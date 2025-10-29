@@ -15,6 +15,9 @@ const taskScheama = new mongoose.Schema({
         type: Date,
         default: null,
     },
-}, {
-     timestamps: true // createdAt và updateAt tự động thêm vào
+},
+    {
+        timestamps: true // createdAt và updateAt tự động thêm vào
     });
+const Task = mongoose.model('Task', taskScheama);
+export default Task;
