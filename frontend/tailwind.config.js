@@ -124,7 +124,3 @@ module.exports = {
     },
     plugins: [],
 };
-Beta
-1 / 10
-used queries
-1
