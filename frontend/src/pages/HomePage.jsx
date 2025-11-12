@@ -71,15 +71,18 @@ const HomePage = () => {
     }
   });
 
+  // Tính toán nhiệm vụ hiển thị trên trang hiện tại
   const visibleTasks = filteredTasks.slice(
     (page - 1) * visibleTaskLimit,
     page * visibleTaskLimit
   );
 
+  // Nếu không có nhiệm vụ hiển thị trên trang hiện tại, quay lại trang trước đó
   if (visibleTasks.length === 0) {
     handlePrev();
   }
 
+  // Tính toán tổng số trang
   const totalPages = Math.ceil(filteredTasks.length / visibleTaskLimit);
 
   return (

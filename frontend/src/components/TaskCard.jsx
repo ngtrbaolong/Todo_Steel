@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Calendar, CheckCircle2, Circle, SquarePen, Trash2 } from "lucide-react";
 import { Input } from "./ui/input";
-// import api from "@/lib/axios";
+import api from "@/lib/axios";
 import { toast } from "sonner";
 
 const TaskCard = ({ task, index, handleTaskChanged }) => {

@@ -4,7 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-// import api from "@/lib/axios";
+import api from "@/lib/axios";
 
 const AddTask = ({ handleNewTaskAdded }) => {
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -48,7 +48,7 @@ const AddTask = ({ handleNewTaskAdded }) => {
           size="xl"
           className="px-6"
           onClick={addTask}
-          disabled={!newTaskTitle.trim()}
+          disabled={!newTaskTitle.trim()} // disable button nếu không có nội dung
         >
           <Plus className="size-5" />
           Thêm
