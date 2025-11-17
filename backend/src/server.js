@@ -1,5 +1,5 @@
 import express from "express";
-import taskRoute from "./routes/tasksRouters.js";
+import taskRoute from "./routes/taskRoutes.js";
 import { connectDB } from "./config/db.js";
 import dotenv from "dotenv";
 import cors from "cors";
