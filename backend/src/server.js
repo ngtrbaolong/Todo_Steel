@@ -4,6 +4,7 @@ import { connectDB } from "./config/db.js";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
+import authRoute from "./routes/authRoute.js";
 
 dotenv.config();
 
@@ -18,6 +19,9 @@ app.use(express.json());
 if (process.env.NODE_ENV !== "production") {
     app.use(cors({ origin: "http://localhost:5173" }));
 }
+
+//public routes
+app.use("/api/auth", authRoute);
 
 app.use("/api/tasks", taskRoute);
 
