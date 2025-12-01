@@ -1,13 +1,19 @@
-import express from 'express';
-import { signIn, signOut, signUp } from '../controllers/authController.js';
-import { sign } from 'jsonwebtoken';
+import express from "express";
+import {
+    refreshToken,
+    signIn,
+    signOut,
+    signUp,
+} from "../controllers/authController.js";
 
 const router = express.Router();
 
-router.post('/signup', signUp);
+router.post("/signup", signUp);
 
-router.post('/signin', signIn);
+router.post("/signin", signIn);
 
-router.post('/sigout', signOut);
+router.post("/signout", signOut);
+
+router.post("/refresh", refreshToken);
 
 export default router;
