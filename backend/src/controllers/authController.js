@@ -81,3 +81,20 @@ export const signIn = async (req, res) => {
         return res.status(500).json({ message: "Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau." });
     }
 };
+
+export const signOut = async (req, res) => {
+    try {
+        // lấy refresh token từ cookie
+        const token = req.cookies?.refreshToken;
+        if (token) {
+            // xóa refresh token trong session
+            await Session.deleteOne({ refreshToken: token });
+            // xóa cookie refresh token
+            res.clearCookie('refreshToken');
+        }
+        return res.status(204).end();
+    } catch (error) {
+        console.error("Lỗi đăng xuất người dùng:", error);
+        return res.status(500).json({ message: "Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau." });
+    }
+};

@@ -1,9 +1,13 @@
 import express from 'express';
-import { signIn, signUp } from '../controllers/authController.js';
+import { signIn, signOut, signUp } from '../controllers/authController.js';
+import { sign } from 'jsonwebtoken';
 
 const router = express.Router();
 
 router.post('/signup', signUp);
+
 router.post('/signin', signIn);
+
+router.post('/sigout', signOut);
 
 export default router;
