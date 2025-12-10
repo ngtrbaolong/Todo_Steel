@@ -19,29 +19,34 @@ export const authService = {
             { withCredentials: true }
         );
         console.log("[authService.signIn] res.data:", res.data);
-        // return whatever shape backend provides. Common: { accessToken, user } or { accessToken }
-        return res.data;
+
+        // backend trả: { accessToken, user }
+        return {
+            accessToken: res.data.accessToken,
+            user: res.data.user ?? null,
+        };
     },
 
     signOut: async () => {
-        // no request body, pass withCredentials in config
-        const res = await api.post("/auth/signout", null, { withCredentials: true });
-        console.log("[authService.signOut] res.data:", res.data);
-        return res.data;
+        await api.post("/auth/signout", null, { withCredentials: true });
+        console.log("[authService.signOut] OK (204)");
+        return true;
     },
 
     fetchMe: async () => {
         const res = await api.get("/users/me", { withCredentials: true });
         console.log("[authService.fetchMe] res.data:", res.data);
-        // adjust according to backend: if backend returns { user }, keep res.data.user
-        return res.data.user ?? res.data;
+
+        // backend trả: { user }
+        return res.data.user;
     },
 
     refresh: async () => {
-        // no body, pass config as third arg
         const res = await api.post("/auth/refresh", null, { withCredentials: true });
         console.log("[authService.refresh] res.data:", res.data);
-        return res.data.accessToken ?? res.data;
+
+        // backend trả: { accessToken }
+        return res.data.accessToken;
     },
 };
 

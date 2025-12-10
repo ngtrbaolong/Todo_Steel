@@ -1,39 +1,41 @@
-// src/lib/api.js
+// src/lib/axios.js
 import axios from "axios";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const api = axios.create({
   baseURL:
-    import.meta.env.MODE === "development" ? "http://localhost:5001/api" : "/api",
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5001/api"
+      : "/api",
   withCredentials: true,
 });
 
-// request interceptor: attach latest access token
-api.interceptors.request.use((config) => {
-  const { accessToken } = useAuthStore.getState();
-  if (accessToken) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-  return config;
-}, (error) => Promise.reject(error));
+// Attach access token to header
+api.interceptors.request.use(
+  (config) => {
+    const { accessToken } = useAuthStore.getState();
+    if (accessToken) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// refresh control
+// refresh queue variables
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(token);
-    }
+    if (error) reject(error);
+    else resolve(token);
   });
   failedQueue = [];
 };
 
-// response interceptor: handle 401/403 with single refresh flow
+// Response Interceptor
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -41,7 +43,6 @@ api.interceptors.response.use(
 
     if (!originalRequest) return Promise.reject(error);
 
-    // skip specific endpoints to avoid infinite loops
     const skipUrls = ["/auth/signin", "/auth/signup", "/auth/refresh"];
     if (skipUrls.some((u) => originalRequest.url?.includes(u))) {
       return Promise.reject(error);
@@ -49,21 +50,17 @@ api.interceptors.response.use(
 
     const status = error.response?.status;
 
-    // consider 401 and 403 as token-expired / unauthorized cases
-    if ((status === 401 || status === 403)) {
-      // if request already retried, reject
+    if (status === 401 || status === 403) {
       if (originalRequest._retry) {
         return Promise.reject(error);
       }
 
-      // If currently refreshing, queue this request
+      // handle refresh in queue if already refreshing
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({
             resolve: (token) => {
-              // attach new token and retry
-              originalRequest.headers = originalRequest.headers || {};
-              if (token) originalRequest.headers.Authorization = `Bearer ${token}`;
+              originalRequest.headers.Authorization = `Bearer ${token}`;
               originalRequest._retry = true;
               resolve(api(originalRequest));
             },
@@ -72,44 +69,36 @@ api.interceptors.response.use(
         });
       }
 
-      // start refresh flow
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        // call refresh endpoint directly using api (it will skip here because of skipUrls)
-        const refreshRes = await api.post("/auth/refresh", null, { withCredentials: true });
-        const newAccessToken = refreshRes.data?.accessToken;
+        const refreshRes = await api.post("/auth/refresh", null, {
+          withCredentials: true,
+        });
 
-        if (!newAccessToken) {
-          // refresh did not return token -> force logout
+        const newToken = refreshRes.data?.accessToken;
+
+        if (!newToken) {
           useAuthStore.getState().clearState();
-          processQueue(new Error("No access token after refresh"), null);
+          processQueue(new Error("Refresh returned no token"));
           return Promise.reject(error);
         }
 
-        // save new token into store
-        useAuthStore.getState().setAccessToken(newAccessToken);
+        useAuthStore.getState().setAccessToken(newToken);
+        processQueue(null, newToken);
 
-        // process queued requests
-        processQueue(null, newAccessToken);
-
-        // retry original request with new token
-        originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // refresh failed -> clear auth and reject all queued requests
         useAuthStore.getState().clearState();
-        processQueue(refreshError, null);
+        processQueue(refreshError);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // not a token issue -> reject normally
     return Promise.reject(error);
   }
 );

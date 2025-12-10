@@ -36,9 +36,22 @@ export const useAuthStore = create(
                 signIn: async (username, password) => {
                     try {
                         set({ loading: true });
-                        const { accessToken } = await authService.signIn(username, password);
+
+                        // backend trả { accessToken, user }
+                        const res = await authService.signIn(username, password);
+                        const { accessToken, user } = res;
+
+                        // lưu accessToken
                         get().setAccessToken(accessToken);
-                        await get().fetchMe();
+
+                        // ⭐ LƯU user trực tiếp
+                        if (user) {
+                            set({ user });
+                        } else {
+                            // fallback nếu backend không trả user
+                            await get().fetchMe();
+                        }
+
                         toast.success("Chào mừng bạn quay lại với Steel 🎉");
                     } catch (error) {
                         console.error(error);
@@ -76,12 +89,15 @@ export const useAuthStore = create(
                 refresh: async () => {
                     try {
                         set({ loading: true });
+
                         const accessToken = await authService.refresh();
                         if (accessToken) {
                             get().setAccessToken(accessToken);
-                            if (!get().user) await get().fetchMe();
+
+                            if (!get().user) {
+                                await get().fetchMe();
+                            }
                         } else {
-                            // no refresh token or refresh failed
                             get().clearState();
                         }
                     } catch (error) {
@@ -94,8 +110,8 @@ export const useAuthStore = create(
                 },
             }),
             {
-                name: "todo-steel-auth", // key in localStorage
-                partialize: (state) => ({ accessToken: state.accessToken }), // chỉ persist token
+                name: "todo-steel-auth",
+                partialize: (state) => ({ accessToken: state.accessToken }),
             }
         )
     )
