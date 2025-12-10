@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "../ui/label";
-// import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom"; // <- sửa sang react-router-dom
 
 const signUpSchema = z.object({
@@ -18,7 +18,7 @@ const signUpSchema = z.object({
 });
 
 export function SignupForm({ className, ...props }) {
-  // const { signUp } = useAuthStore();
+  const { signUp } = useAuthStore();
   const navigate = useNavigate();
 
   const {
@@ -97,7 +97,7 @@ export function SignupForm({ className, ...props }) {
                 <Input
                   type="text"
                   id="username"
-                  placeholder="moji"
+                  placeholder="Nhập tên đăng nhập của bạn"
                   {...register("username")}
                 />
                 {errors.username && (

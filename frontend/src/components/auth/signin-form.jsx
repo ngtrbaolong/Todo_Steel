@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "../ui/label";
-// import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom"; // <-- sửa sang react-router-dom
 
 const signInSchema = z.object({
@@ -15,7 +15,7 @@ const signInSchema = z.object({
 });
 
 export function SigninForm({ className, ...props }) {
-    // const { signIn } = useAuthStore();
+    const { signIn } = useAuthStore();
     const navigate = useNavigate();
 
     const {
@@ -52,7 +52,7 @@ export function SigninForm({ className, ...props }) {
 
                                 <h1 className="text-2xl font-bold">Chào mừng quay lại</h1>
                                 <p className="text-muted-foreground text-balance">
-                                    Đăng nhập vào tài khoản Moji của bạn
+                                    Đăng nhập vào tài khoản Steel của bạn
                                 </p>
                             </div>
 
@@ -64,7 +64,7 @@ export function SigninForm({ className, ...props }) {
                                 <Input
                                     type="text"
                                     id="username"
-                                    placeholder="moji"
+                                    placeholder="Nhập tên đăng nhập của bạn"
                                     {...register("username")}
                                 />
                                 {errors.username && (

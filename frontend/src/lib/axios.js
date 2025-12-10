@@ -1,5 +1,6 @@
-
+// src/lib/api.js
 import axios from "axios";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const api = axios.create({
   baseURL:
@@ -7,51 +8,108 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// gắn access token vào req header
+// request interceptor: attach latest access token
 api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState();
-
   if (accessToken) {
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
-
   return config;
-});
+}, (error) => Promise.reject(error));
 
-// tự động gọi refresh api khi access token hết hạn
+// refresh control
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// response interceptor: handle 401/403 with single refresh flow
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config;
 
-    // những api không cần check
-    if (
-      originalRequest.url.includes("/auth/signin") ||
-      originalRequest.url.includes("/auth/signup") ||
-      originalRequest.url.includes("/auth/refresh")
-    ) {
+    if (!originalRequest) return Promise.reject(error);
+
+    // skip specific endpoints to avoid infinite loops
+    const skipUrls = ["/auth/signin", "/auth/signup", "/auth/refresh"];
+    if (skipUrls.some((u) => originalRequest.url?.includes(u))) {
       return Promise.reject(error);
     }
 
-    originalRequest._retryCount = originalRequest._retryCount || 0;
+    const status = error.response?.status;
 
-    if (error.response?.status === 403 && originalRequest._retryCount < 4) {
-      originalRequest._retryCount += 1;
+    // consider 401 and 403 as token-expired / unauthorized cases
+    if ((status === 401 || status === 403)) {
+      // if request already retried, reject
+      if (originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
+      // If currently refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token) => {
+              // attach new token and retry
+              originalRequest.headers = originalRequest.headers || {};
+              if (token) originalRequest.headers.Authorization = `Bearer ${token}`;
+              originalRequest._retry = true;
+              resolve(api(originalRequest));
+            },
+            reject,
+          });
+        });
+      }
+
+      // start refresh flow
+      originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-        const res = await api.post("/auth/refresh", { withCredentials: true });
-        const newAccessToken = res.data.accessToken;
+        // call refresh endpoint directly using api (it will skip here because of skipUrls)
+        const refreshRes = await api.post("/auth/refresh", null, { withCredentials: true });
+        const newAccessToken = refreshRes.data?.accessToken;
 
+        if (!newAccessToken) {
+          // refresh did not return token -> force logout
+          useAuthStore.getState().clearState();
+          processQueue(new Error("No access token after refresh"), null);
+          return Promise.reject(error);
+        }
+
+        // save new token into store
         useAuthStore.getState().setAccessToken(newAccessToken);
 
+        // process queued requests
+        processQueue(null, newAccessToken);
+
+        // retry original request with new token
+        originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
         return api(originalRequest);
       } catch (refreshError) {
+        // refresh failed -> clear auth and reject all queued requests
         useAuthStore.getState().clearState();
+        processQueue(refreshError, null);
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
+    // not a token issue -> reject normally
     return Promise.reject(error);
   }
 );
